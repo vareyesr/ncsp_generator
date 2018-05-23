@@ -1,0 +1,19 @@
+[base]
+n = 6
+m = 6
+dom = -10 10
+# should be larger than 1.0
+poolsize = 12 
+rnd_seed = 1
+# coefficients
+r1 = -5 -4 -3 -2 -1 1 2 3 4 5  
+# the constant
+r2 = -5 -4 -3 -2 -1 0 1 2 3 4 5  
+# exponents (in sums)
+r3 = -1 1 
+
+[set1]
+nb_inst = 10
+P = 18
+Q = 36
+

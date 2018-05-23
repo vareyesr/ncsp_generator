@@ -1,12 +1,14 @@
-from py_expression_eval import Parser
+#from py_expression_eval import Parser
+import ConfigParser
 import random
 from sets import Set
 import math
 import array
 import numpy as np
-        
+
 class Instance_mult:
-    def __init__(self,nb_eq,P,Q,nb_inst,r1,r2,r3,min_dom,max_dom):
+    def __init__(self,nb_var,nb_eq,P,Q,nb_inst,r1,r2,r3,min_dom,max_dom):
+        self.nb_var = nb_var
         self.nb_eq = nb_eq
         self.P = P 
         self.Q = Q
@@ -19,6 +21,16 @@ class Instance_mult:
         #create pool
         pool = create_pool(nb_eq,nb_eq,nb_inst)
         #create sets
+        #list_sets = create_sum_expressions(self.P,self.Q,pool)
+
+def create_sum_expressions(P,pool):
+    sum_expressions = [set() for _ in xrange(P)]
+    #fill all the sets
+    for i in range(0,P):
+        sum_expressions[i].add(pool[random.randint(0,len(pool)-1)])
+    #fill until Q elements
+  #  for i in range(0,P-Q):
+
         
 def create_pool(nb_var,unary_eq,nb_inst):
     #create the first n variables
@@ -45,19 +57,30 @@ def sets_sums(nb_eq):
     #create pool of variables    
         
 if __name__ == '__main__':
-    nseed = input('Enter the seed: ')
-    num_instances = input('enter the number of instances to be created: ')
-    nb_eq = input('enter the maximum number of variables (minimum set to 3): ')
-    max_dom = input('enter maximum domain size: ')
-    min_dom = input('enter minimum domain size: ')
-    r1 = array.array('i',(i for i in range(-10,11)))
-    r2 = array.array('i',(i for i in range(-10,11)))
-    r3 = array.array('i',(-1,1))
+
+    configParser = ConfigParser.RawConfigParser()   
+    configParser.read("config.txt")
+    n = int(configParser.get('base', 'n'))
+    m = int(configParser.get('base', 'm'))
+
+    lb,ub = configParser.get('base', 'dom').split()
+    lb = int(lb)
+    ub = int(ub)
+
+    poolsize = int(configParser.get('base', 'poolsize'))
+    rnd_seed = int(configParser.get('base', 'rnd_seed'))
+
+    r1 = [float(x) for x in configParser.get('base', 'r1').split()]
+    r2 = [float(x) for x in configParser.get('base', 'r2').split()]
+    r3 = [float(x) for x in configParser.get('base', 'r3').split()]
+
+    nb_inst = int(configParser.get('set1', 'nb_inst'))
+
+    P = int(configParser.get('set1', 'P'))
+    Q = int(configParser.get('set1', 'Q'))
+
     #number of constraints per equation
-    nb_eqxctr = 6
-    random.seed(nseed)
-    for i in range(1, num_instances+1):
-        P = array.array('i',(6,12,18))
-        Q = nb_eq*nb_eqxctr
-        Instance_mult(random.randint(3,nb_eq),P[random.randint(0,len(P)-1)],Q,i,r1,r2,r3,min_dom,max_dom)
+    random.seed(rnd_seed)
+    for i in range(1, nb_inst+1):
+        Instance_mult(n,m,P,Q,i,r1,r2,r3,lb,ub)
     
