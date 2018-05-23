@@ -9,6 +9,8 @@ import math
 import array
 import numpy as np
 import operator
+import re
+import copy
 
 class NumericStringParser(object):
 
@@ -106,7 +108,6 @@ class NumericStringParser(object):
         val = self.evaluateStack(self.exprStack[:])
         return val
 
-
 class Instance_mult:
     def __init__(self,nb_var,nb_eq,P,Q,nb_inst,r1,r2,r3,min_dom,max_dom):
         self.nb_var = nb_var
@@ -127,10 +128,10 @@ class Instance_mult:
         list_products = create_products(list_sets,self.nb_eq,self.P)
         #create constraint
         constraints = create_constraint(list_products,self.r1,self.r2,self.r3)
+        #evaluate each constraint with a tuple (x0,x1....,xn)
+        constraints,solution = evaluate_constraints(constraints,self.min_dom,self.max_dom)
         #create file
-        constraints = evaluate_constraints(constraints)
-        #create_file(constraints,self.min_dom,self.max_dom)
-
+        create_file(constraints,solution,self.min_dom,self.max_dom)
 
 def create_sum_expressions(P,Q,pool):
     sum_expressions = [set() for _ in xrange(P)]
@@ -151,7 +152,6 @@ def create_sum_expressions(P,Q,pool):
 
 def create_products(list_sets,nb_eq,P):
     list_factors = [list() for _ in xrange(nb_eq)]
-    print list_sets
     #fill all the constraints
     for i in range(0,nb_eq):
         element = list_sets[random.randint(0,len(list_sets)-1)]
@@ -185,14 +185,30 @@ def create_constraint(list_products,r1,r2,r3):
                     constraint = constraint+'+'+str(coef)+'*'+k
             constraint = constraint+')'
         list_expressions[i] = constraint
-        print constraint
+        #print constraint
     return list_expressions
 
-def evaluate_constraints(constraints):
+def evaluate_constraints(constraints,min_dom,max_dom):
+    evaluation = copy.copy(constraints)
+    solution = np.zeros(len(constraints))
+    #a random solution is generated
+    for i in range(0, len (constraints)):
+        solution[i] = random.uniform(min_dom,max_dom) 
+    #we evaluate each constraint in the solution in order to guarantee that the problem is not empty
+    #first we replace the variables for sol
+    for i in range(0, len (evaluation)):
+        for j in range(0, len (evaluation)):
+            evaluation[i] = re.sub(r'x'+str(j),str(solution[j]),evaluation[i])    
+    nsp = NumericStringParser()
+    for i in range(0, len (constraints)):
+        result = nsp.eval(evaluation[i])
+        constraints[i] = constraints[i]+' = '+str(result)
+    return constraints, solution
 
-def create_file(list_products):
-
-    print 'haciendo'
+def create_file(constraints,solution,min_dom,max_dom):
+    print '//solution: '+str(solution) 
+    for i in range(0, len (constraints)):
+        print constraints[i]
 
 def create_pool(nb_var,unary_eq,nb_inst):
     #create the first n variables
@@ -202,8 +218,8 @@ def create_pool(nb_var,unary_eq,nb_inst):
     #additional (unary functions)
     for i in range(0,unary_eq):
         pool_list.append(unary_fun()+'('+random_var(pool_list[:nb_var])+')')
-    print 'pool list generated for the instance '+str(nb_inst)+':'
-    print pool_list
+   # print 'pool list generated for the instance '+str(nb_inst)+':'
+   # print pool_list
     return pool_list
 
 def unary_fun():        
