@@ -1,4 +1,8 @@
-#from py_expression_eval import Parser
+#
+#Created:       20/05/2018
+#Last update:   24/05/2018
+#Authors:       Victor Reyes, Ignacio Araya
+#
 from __future__ import division
 from pyparsing import (Literal, CaselessLiteral, Word, Combine, Group, Optional,
                        ZeroOrMore, Forward, nums, alphas, oneOf)
@@ -11,6 +15,7 @@ import numpy as np
 import operator
 import re
 import copy
+import os
 
 class NumericStringParser(object):
 
@@ -131,7 +136,7 @@ class Instance_mult:
         #evaluate each constraint with a tuple (x0,x1....,xn)
         constraints,solution = evaluate_constraints(constraints,self.min_dom,self.max_dom)
         #create file
-        create_file(constraints,solution,self.min_dom,self.max_dom)
+        create_file(constraints,solution,self.min_dom,self.max_dom,self.nb_inst,self.nb_var)
 
 def create_sum_expressions(P,Q,pool):
     sum_expressions = [set() for _ in xrange(P)]
@@ -205,10 +210,25 @@ def evaluate_constraints(constraints,min_dom,max_dom):
         constraints[i] = constraints[i]+' = '+str(result)
     return constraints, solution
 
-def create_file(constraints,solution,min_dom,max_dom):
-    print '//solution: '+str(solution) 
-    for i in range(0, len (constraints)):
-        print constraints[i]
+def create_file(constraints,solution,min_dom,max_dom,nb_inst,nb_var):
+    #for i in range(0, len (constraints)):
+    #   print constraints[i]
+
+    filename = 'instance'+str(nb_inst)+'.bch'
+    f = open(filename,"w+")
+    f.write('//'+'One known solution for this problem is:\n')
+    f.write('//')
+    for i in range (0, len(solution)):
+        f.write(str(solution[i])+',')
+    f.write('\nVariables\n\n')
+    for i in range (0,nb_var):
+        f.write('x'+str(i)+' in '+ '['+str(min_dom)+','+str(max_dom)+'];\n')
+    f.write('\nConstraints\n\n')
+    for i in range (0,len(constraints)):
+        f.write(constraints[i]+';\n')
+    f.write('end')
+
+
 
 def create_pool(nb_var,unary_eq,nb_inst):
     #create the first n variables
@@ -223,7 +243,8 @@ def create_pool(nb_var,unary_eq,nb_inst):
     return pool_list
 
 def unary_fun():        
-    unary = ['sin','cos','tan','exp','ln']
+    unary = ['sin','cos','tan','exp']
+    #unary = ['sin','cos','tan','exp','ln']
     return unary[random.randint(0,len(unary)-1)]
 
 def random_var(poolvar):
@@ -257,3 +278,4 @@ if __name__ == '__main__':
     random.seed(rnd_seed)
     for i in range(1, nb_inst+1):
         Instance_mult(n,m,P,Q,i,r1,r2,r3,lb,ub)
+    print str(nb_inst)+' instances had been created!'
