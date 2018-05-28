@@ -16,6 +16,7 @@ import operator
 import re
 import copy
 import os
+import sys
 
 class NumericStringParser(object):
 
@@ -114,19 +115,23 @@ class NumericStringParser(object):
         return val
 
 class Instance_mult:
-    def __init__(self,nb_var,nb_eq,P,Q,nb_inst,r1,r2,r3,min_dom,max_dom):
+    def __init__(self,nb_var,nb_eq,poolsize,P,Q,nb_inst,r1,r2,r3,r4,min_dom,max_dom,sett):
         self.nb_var = nb_var
         self.nb_eq = nb_eq
+        self.poolsize = poolsize
         self.P = P 
         self.Q = Q
         self.nb_inst = nb_inst
         self.r1 = r1
         self.r2 = r2
         self.r3 = r3
+        self.r4 = r4
         self.min_dom = min_dom
         self.max_dom = max_dom 
+        self.sett = sett
+
         #create pool
-        pool = create_pool(nb_eq,nb_eq,nb_inst)
+        pool = create_pool(nb_eq,poolsize,nb_inst,r4)
         #create sets
         list_sets = create_sum_expressions(self.P,self.Q,pool)
         #create product
@@ -136,7 +141,7 @@ class Instance_mult:
         #evaluate each constraint with a tuple (x0,x1....,xn)
         constraints,solution = evaluate_constraints(constraints,self.min_dom,self.max_dom)
         #create file
-        create_file(constraints,solution,self.min_dom,self.max_dom,self.nb_inst,self.nb_var)
+        create_file(constraints,solution,self.min_dom,self.max_dom,self.nb_inst,self.nb_var,self.sett)
 
 def create_sum_expressions(P,Q,pool):
     sum_expressions = [set() for _ in xrange(P)]
@@ -150,6 +155,7 @@ def create_sum_expressions(P,Q,pool):
         #if the expression is already in the set, search for a new one
         while  pool_element in sum_expressions[set_pos]:
             pool_element = pool[random.randint(0,len(pool)-1)]
+            set_pos = random.randint(0,len(sum_expressions)-1)
         sum_expressions[set_pos].add(pool_element)
     #print 'sets of expressions: '
     #print sum_expressions
@@ -180,15 +186,19 @@ def create_constraint(list_products,r1,r2,r3):
             if coef == 0:
                 constraint = constraint+'('
             else:
-                constraint = constraint+'('+str(coef)
+                constraint = constraint+'('+str(int(coef))
             element = list_products[i][j]
             for k in element:
                 coef = r1[random.randint(0,len(r1)-1)]
                 if coef < 0:
-                    constraint = constraint+str(coef)+'*'+k
+                    constraint = constraint+str(int(coef))+'*'+k
                 else:
-                    constraint = constraint+'+'+str(coef)+'*'+k
-            constraint = constraint+')'
+                    constraint = constraint+'+'+str(int(coef))+'*'+k
+            exp = r3[random.randint(0,len(r3)-1)]
+            if exp != 1:
+                constraint = constraint+')^'+str(int(exp))
+            else:
+                constraint = constraint+')'
         list_expressions[i] = constraint
         #print constraint
     return list_expressions
@@ -210,72 +220,121 @@ def evaluate_constraints(constraints,min_dom,max_dom):
         constraints[i] = constraints[i]+' = '+str(result)
     return constraints, solution
 
-def create_file(constraints,solution,min_dom,max_dom,nb_inst,nb_var):
+def create_file(constraints,solution,min_dom,max_dom,nb_inst,nb_var,sett):
     #for i in range(0, len (constraints)):
     #   print constraints[i]
 
-    filename = 'instance'+str(nb_inst)+'.bch'
-    f = open(filename,"w+")
+    if not os.path.exists('benchs'):
+        os.makedirs('benchs')
+
+    if not os.path.exists('benchs/'+sett):
+        os.makedirs('benchs/'+sett)
+
+    completeName = os.path.join('benchs/'+sett, 'inst'+ "%03d" % (nb_inst)+ ".txt")         
+
+    f = open(completeName,"w+")
     f.write('//'+'One known solution for this problem is:\n')
     f.write('//')
     for i in range (0, len(solution)):
         f.write(str(solution[i])+',')
     f.write('\nVariables\n\n')
     for i in range (0,nb_var):
-        f.write('x'+str(i)+' in '+ '['+str(min_dom)+','+str(max_dom)+'];\n')
+        f.write('x'+str(i)+' in '+ '[-100,100];\n')
     f.write('\nConstraints\n\n')
     for i in range (0,len(constraints)):
         f.write(constraints[i]+';\n')
     f.write('end')
 
 
-
-def create_pool(nb_var,unary_eq,nb_inst):
+def create_pool(nb_var,poolsize,nb_inst,r4):
     #create the first n variables
     pool_list = []
+    pool_set = set()
     for i in range(0, nb_var):
         pool_list.append('x'+str(i))
     #additional (unary functions)
-    for i in range(0,unary_eq):
-        pool_list.append(unary_fun()+'('+random_var(pool_list[:nb_var])+')')
-   # print 'pool list generated for the instance '+str(nb_inst)+':'
-   # print pool_list
+    unary_exp = copy.copy(pool_list)
+
+    #fns = [unary_fun,power_fun]
+    fns = [unary_fun]
+    for i in range(0,poolsize-nb_var):
+        expression = random.choice(fns)(unary_exp,r4)
+        while expression in pool_set:
+            expression = random.choice(fns)(unary_exp,r4) 
+        pool_list.append(expression)
+        pool_set.add(expression)
     return pool_list
 
-def unary_fun():        
-    unary = ['sin','cos','tan','exp']
+def unary_fun(unary_exp,r4):        
+    unary = ['exp']
+    #unary = ['sin','cos','tan','exp']
     #unary = ['sin','cos','tan','exp','ln']
-    return unary[random.randint(0,len(unary)-1)]
+    return unary[random.randint(0,len(unary)-1)]+'('+unary_exp[random.randint(0,len(unary_exp)-1)]+')'
+
+def power_fun(unary_exp,r4):        
+    return unary_exp[random.randint(0,len(unary_exp)-1)]+'^'+str(int(r4[random.randint(0,len(r4)-1)]))
 
 def random_var(poolvar):
     pos = random.randint(0,len(poolvar)-1)
     return poolvar[pos]    
-        
+
+class Params:
+    def __init__(self, configParser):
+        self.configParser=configParser
+        self.set_parameters("default")
+
+
+    def set_parameters(self, name):
+        self.set = name
+
+        if configParser.has_option(name,  'n'):
+            self.n = int(configParser.get(name, 'n'))
+
+        if configParser.has_option(name,  'm'):
+            self.m = int(configParser.get(name, 'm'))
+
+        if configParser.has_option(name,  'dom'):
+            self.lb,self.ub = configParser.get(name, 'dom').split()
+            self.lb = int(self.lb)
+            self.ub = int(self.ub)
+
+        if configParser.has_option(name,  'poolsize'):
+            self.poolsize = int(configParser.get(name, 'poolsize'))
+
+        if configParser.has_option(name,  'rnd_seed'):
+            self.rnd_seed = int(configParser.get(name, 'rnd_seed'))
+
+        if configParser.has_option(name,  'r1'):
+            self.r1 = [float(x) for x in configParser.get(name, 'r1').split()]
+            self.r2 = [float(x) for x in configParser.get(name, 'r2').split()]
+            self.r3 = [float(x) for x in configParser.get(name, 'r3').split()]
+            self.r4 = [float(x) for x in configParser.get(name, 'r4').split()]
+
+        if configParser.has_option(name, 'nb_inst'):
+            self.nb_inst = int(configParser.get(name, 'nb_inst'))
+
+        if configParser.has_option(name, 'P'):
+            self.P = int(configParser.get(name, 'P'))
+
+        if configParser.has_option(name, 'Q'):
+            self.Q = int(configParser.get(name, 'Q'))
+     
 if __name__ == '__main__':
 
     configParser = ConfigParser.RawConfigParser()   
     configParser.read("config.txt")
-    n = int(configParser.get('base', 'n'))
-    m = int(configParser.get('base', 'm'))
 
-    lb,ub = configParser.get('base', 'dom').split()
-    lb = int(lb)
-    ub = int(ub)
+    p = Params(configParser)
+    random.seed(p.rnd_seed)
 
-    poolsize = int(configParser.get('base', 'poolsize'))
-    rnd_seed = int(configParser.get('base', 'rnd_seed'))
+    for sett in configParser.get('default', 'sets').split():
+        p.set_parameters('default')
+        p.set_parameters(sett)
 
-    r1 = [float(x) for x in configParser.get('base', 'r1').split()]
-    r2 = [float(x) for x in configParser.get('base', 'r2').split()]
-    r3 = [float(x) for x in configParser.get('base', 'r3').split()]
-
-    nb_inst = int(configParser.get('set1', 'nb_inst'))
-
-    P = int(configParser.get('set1', 'P'))
-    Q = int(configParser.get('set1', 'Q'))
-
-    #number of constraints per equation
-    random.seed(rnd_seed)
-    for i in range(1, nb_inst+1):
-        Instance_mult(n,m,P,Q,i,r1,r2,r3,lb,ub)
-    print str(nb_inst)+' instances had been created!'
+        #number of constraints per equation
+        for i in range(1, p.nb_inst+1):
+            Instance_mult(p.n,p.m,p.poolsize,p.P,p.Q,i,p.r1,p.r2,p.r3,p.r4,p.lb,p.ub,p.set)
+        if p.nb_inst == 1:
+            print str(p.nb_inst)+' instance has been created!'
+        else:
+            print str(p.nb_inst)+' instances had been created!'
