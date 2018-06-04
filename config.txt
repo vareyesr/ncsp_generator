@@ -1,47 +1,36 @@
 [default]
-sets = set1
-#sets = set1 lin10-10
+
+sets = test10-10-100 test10-12-100 test10-15-100 test10-20-100 
 
 n = 10
 m = 10
 dom = -1 1
-poolsize = 20
+poolsize = 15
+type_bench = mul
 rnd_seed = 1
 # coefficients
 r1 = -5 -4 -3 -2 -1 1 2 3 4 5  
 # the constant
-r2 = -5 -4 -3 -2 -1 0 1 2 3 4 5  
+r2 = -5 -4 -3 -2 -1 1 2 3 4 5  
 # exponents (in sums)
-r3 = 1 2
+r3 = -1 1
 # exponents (in variables for the pool)
-r4 = 2 3 
+r4 = 1 2 
 nb_inst = 10
 
-[set1]
-nb_inst = 1
+[test10-10-100]
 P = 10
-Q = 200
+Q = 100
 
-[ps20-P10]
-description = una suma por restricción (n=m=10)
-poolsize = 20
-P = 10
-Q = 200
+[test10-12-100]
+P = 12
+Q = 100
 
-[ps20-P20]
-description = 2 sumas por restricción (n=m=10), cada suma con alrededor de 200/20=10 términos
-poolsize = 20
+[test10-15-100]
+P = 15
+Q = 100
+
+[test10-10-100]
 P = 20
-Q = 200
+Q = 100
 
-[ps20-P30]
-description = 3 sumas por restricción (n=m=10), cada suma con alrededor de 200/40=5 términos
-poolsize = 20
-P = 40
-Q = 200
-
-[ps20-P100]
-description = 10 sumas por restricción (n=m=10), cada suma con alrededor de 200/100=2 términos
-poolsize = 20
-P = 100
-Q = 200

@@ -114,8 +114,8 @@ class NumericStringParser(object):
         val = self.evaluateStack(self.exprStack[:])
         return val
 
-class Instance_mult:
-    def __init__(self,nb_var,nb_eq,poolsize,P,Q,nb_inst,r1,r2,r3,r4,min_dom,max_dom,sett):
+class Instance_creator:
+    def __init__(self,nb_var,nb_eq,poolsize,P,Q,nb_inst,r1,r2,r3,r4,min_dom,max_dom,sett,type_bench):
         self.nb_var = nb_var
         self.nb_eq = nb_eq
         self.poolsize = poolsize
@@ -129,39 +129,38 @@ class Instance_mult:
         self.min_dom = min_dom
         self.max_dom = max_dom 
         self.sett = sett
-
+        self.type_bench = type_bench
         #create pool
-        pool = create_pool(nb_eq,poolsize,nb_inst,r4)
+        pool = create_pool(nb_eq,poolsize,nb_inst,r4,self.type_bench)
         #create sets
-        list_sets = create_sum_expressions(self.P,self.Q,pool)
+        list_sets = create_pool_expressions(self.P,self.Q,pool)
         #create product
-        list_products = create_products(list_sets,self.nb_eq,self.P)
+        list_expressions = create_expressions(list_sets,self.nb_eq,self.P)
         #create constraint
-        constraints = create_constraint(list_products,self.r1,self.r2,self.r3)
+        constraints = create_constraints(list_expressions,self.r1,self.r2,self.r3,self.type_bench)
         #evaluate each constraint with a tuple (x0,x1....,xn)
         constraints,solution = evaluate_constraints(constraints,self.min_dom,self.max_dom)
         #create file
         create_file(constraints,solution,self.min_dom,self.max_dom,self.nb_inst,self.nb_var,self.sett)
 
-def create_sum_expressions(P,Q,pool):
-    sum_expressions = [set() for _ in xrange(P)]
+def create_pool_expressions(P,Q,pool):
+    expressions = [set() for _ in xrange(P)]
     #fill all the sets
     for i in range(0,P):
-        sum_expressions[i].add(pool[random.randint(0,len(pool)-1)])
+        expressions[i].add(pool[random.randint(0,len(pool)-1)])
     #fill until Q elements
     for i in range(0,Q-P):
         pool_element = pool[random.randint(0,len(pool)-1)]
-        set_pos = random.randint(0,len(sum_expressions)-1)
+        set_pos = random.randint(0,len(expressions)-1)
         #if the expression is already in the set, search for a new one
-        while  pool_element in sum_expressions[set_pos]:
+        while  pool_element in expressions[set_pos]:
             pool_element = pool[random.randint(0,len(pool)-1)]
-            set_pos = random.randint(0,len(sum_expressions)-1)
-        sum_expressions[set_pos].add(pool_element)
+            set_pos = random.randint(0,len(expressions)-1)
+        expressions[set_pos].add(pool_element)
     #print 'sets of expressions: '
-    #print sum_expressions
-    return sum_expressions      
+    return expressions      
 
-def create_products(list_sets,nb_eq,P):
+def create_expressions(list_sets,nb_eq,P):
     list_factors = [list() for _ in xrange(nb_eq)]
     #fill all the constraints
     for i in range(0,nb_eq):
@@ -175,33 +174,47 @@ def create_products(list_sets,nb_eq,P):
         list_sets.remove(element)
     return list_factors
 
-def create_constraint(list_products,r1,r2,r3):
-    list_expressions = [list() for _ in xrange(len(list_products))]
-    for i in range(0,len(list_expressions)):
+def create_constraints(list_products,r1,r2,r3,type_bench):
+    list_constraints = [list() for _ in xrange(len(list_products))]
+    for i in range(0,len(list_constraints)):
         constraint = ''
-        for j in range(0,len(list_products[i])):
-            if j is not 0:
-                constraint = constraint+'*'
-            coef = r2[random.randint(0,len(r2)-1)]
-            if coef == 0:
-                constraint = constraint+'('
-            else:
-                constraint = constraint+'('+str(int(coef))
-            element = list_products[i][j]
-            for k in element:
-                coef = r1[random.randint(0,len(r1)-1)]
-                if coef < 0:
-                    constraint = constraint+str(int(coef))+'*'+k
+        if type_bench == 'sum':
+            for j in range(0,len(list_products[i])):
+                if j is not 0:
+                    constraint = constraint+'*'
+                coef = r2[random.randint(0,len(r2)-1)]
+                if coef == 0:
+                    constraint = constraint+'('
                 else:
-                    constraint = constraint+'+'+str(int(coef))+'*'+k
-            exp = r3[random.randint(0,len(r3)-1)]
-            if exp != 1:
-                constraint = constraint+')^'+str(int(exp))
-            else:
-                constraint = constraint+')'
-        list_expressions[i] = constraint
-        #print constraint
-    return list_expressions
+                    constraint = constraint+'('+str(int(coef))
+                element = list_products[i][j]
+                for k in element:
+                    coef = r1[random.randint(0,len(r1)-1)]
+                    if coef < 0:
+                        constraint = constraint+str(int(coef))+'*'+k
+                    else:
+                        constraint = constraint+'+'+str(int(coef))+'*'+k
+                exp = r3[random.randint(0,len(r3)-1)]
+                if exp != 1:
+                    constraint = constraint+')^('+str(int(exp))+')'
+                else:
+                    constraint = constraint+')'
+        else:
+            for j in range(0,len(list_products[i])):
+                if j is not 0:
+                    constraint = constraint+'+'
+                coef = r2[random.randint(0,len(r2)-1)]
+                constraint = constraint+'('+str(int(coef))
+                element = list_products[i][j]
+                for k in element:
+                    coef = r1[random.randint(0,len(r1)-1)]
+                    if coef < 0:
+                        constraint = constraint+'*('+k+')^('+str(int(coef))+')'
+                    else:
+                         constraint =constraint+'*('+k+')^'+str(int(coef))
+                constraint = constraint+')'         
+        list_constraints[i] = constraint
+    return list_constraints
 
 def evaluate_constraints(constraints,min_dom,max_dom):
     evaluation = copy.copy(constraints)
@@ -231,7 +244,6 @@ def create_file(constraints,solution,min_dom,max_dom,nb_inst,nb_var,sett):
         os.makedirs('benchs/'+sett)
 
     completeName = os.path.join('benchs/'+sett, 'inst'+ "%03d" % (nb_inst)+ ".txt")         
-
     f = open(completeName,"w+")
     f.write('//'+'One known solution for this problem is:\n')
     f.write('//')
@@ -239,25 +251,40 @@ def create_file(constraints,solution,min_dom,max_dom,nb_inst,nb_var,sett):
         f.write(str(solution[i])+',')
     f.write('\nVariables\n\n')
     for i in range (0,nb_var):
-        f.write('x'+str(i)+' in '+ '[-100,100];\n')
+        f.write('x'+str(i)+' in '+ '[1,1e8];\n')
     f.write('\nConstraints\n\n')
     for i in range (0,len(constraints)):
         f.write(constraints[i]+';\n')
     f.write('end')
 
 
-def create_pool(nb_var,poolsize,nb_inst,r4):
+def create_pool(nb_var,poolsize,nb_inst,r4,type_bench):
     #create the first n variables
     pool_list = []
+    unary_exp = []
     pool_set = set()
     for i in range(0, nb_var):
-        pool_list.append('x'+str(i))
+        unary_exp.append('x'+str(i))
     #additional (unary functions)
-    unary_exp = copy.copy(pool_list)
+    if type_bench == 'sum':
+        for i in range (0, nb_var):
+            exponent = int(r4[random.randint(0,len(r4)-1)])
+            if exponent == 1:
+                expression = 'x'+str(i)
+            else:
+                expression = 'x'+str(i)+'^'+str(exponent)
+            pool_list.append(expression)
+            pool_set.add(expression)
+        fns = [power_fun]
+    else:
+        for i in range (0, nb_var):
+            expression = 'x'+str(i)
+            pool_list.append(expression)
+            pool_set.add(expression)
+        fns = [unary_fun]
 
-    #fns = [unary_fun,power_fun]
-    fns = [unary_fun]
-    for i in range(0,poolsize-nb_var):
+    current_size = len(pool_list)
+    for i in range(0,poolsize-nb_var): 
         expression = random.choice(fns)(unary_exp,r4)
         while expression in pool_set:
             expression = random.choice(fns)(unary_exp,r4) 
@@ -266,14 +293,17 @@ def create_pool(nb_var,poolsize,nb_inst,r4):
     return pool_list
 
 def unary_fun(unary_exp,r4):        
-    unary = ['exp']
-    #unary = ['sin','cos','tan','exp']
+    #unary = ['exp']
+    unary = ['sin','cos','tan','exp']
     #unary = ['sin','cos','tan','exp','ln']
     return unary[random.randint(0,len(unary)-1)]+'('+unary_exp[random.randint(0,len(unary_exp)-1)]+')'
 
-def power_fun(unary_exp,r4):        
-    return unary_exp[random.randint(0,len(unary_exp)-1)]+'^'+str(int(r4[random.randint(0,len(r4)-1)]))
-
+def power_fun(unary_exp,r4):
+    exponent = int(r4[random.randint(0,len(r4)-1)])
+    if exponent == 1:     
+        return unary_exp[random.randint(0,len(unary_exp)-1)]
+    else:
+        return unary_exp[random.randint(0,len(unary_exp)-1)]+'^'+str(exponent)    
 def random_var(poolvar):
     pos = random.randint(0,len(poolvar)-1)
     return poolvar[pos]    
@@ -300,6 +330,9 @@ class Params:
 
         if configParser.has_option(name,  'poolsize'):
             self.poolsize = int(configParser.get(name, 'poolsize'))
+
+        if configParser.has_option(name,  'type_bench'):
+            self.type_bench = str(configParser.get(name, 'type_bench'))
 
         if configParser.has_option(name,  'rnd_seed'):
             self.rnd_seed = int(configParser.get(name, 'rnd_seed'))
@@ -333,7 +366,7 @@ if __name__ == '__main__':
 
         #number of constraints per equation
         for i in range(1, p.nb_inst+1):
-            Instance_mult(p.n,p.m,p.poolsize,p.P,p.Q,i,p.r1,p.r2,p.r3,p.r4,p.lb,p.ub,p.set)
+            Instance_creator(p.n,p.m,p.poolsize,p.P,p.Q,i,p.r1,p.r2,p.r3,p.r4,p.lb,p.ub,p.set,p.type_bench)
         if p.nb_inst == 1:
             print str(p.nb_inst)+' instance has been created!'
         else:
