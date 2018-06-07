@@ -1,12 +1,12 @@
 [default]
 
-sets = test10-10-100 test10-12-100 test10-15-100 test10-20-100 
+sets = test11-110 test11-140 test11-165 test12-120 test12-150 test12-180
 
 n = 10
 m = 10
 dom = -1 1
 poolsize = 15
-type_bench = mul
+type_bench = sum
 rnd_seed = 1
 # coefficients
 r1 = -5 -4 -3 -2 -1 1 2 3 4 5  
@@ -18,19 +18,27 @@ r3 = -1 1
 r4 = 1 2 
 nb_inst = 10
 
-[test10-10-100]
-P = 10
-Q = 100
+[test11-110]
+P = 11
+Q = 110
 
-[test10-12-100]
+[test11-140]
+P = 11
+Q = 140
+
+[test11-165]
+P = 11
+Q = 165
+
+[test12-120]
 P = 12
-Q = 100
+Q = 120
 
-[test10-15-100]
-P = 15
-Q = 100
+[test12-150]
+P = 12
+Q = 150
 
-[test10-10-100]
-P = 20
-Q = 100
+[test12-180]
+P = 12
+Q = 180
 

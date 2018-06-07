@@ -251,7 +251,7 @@ def create_file(constraints,solution,min_dom,max_dom,nb_inst,nb_var,sett):
         f.write(str(solution[i])+',')
     f.write('\nVariables\n\n')
     for i in range (0,nb_var):
-        f.write('x'+str(i)+' in '+ '[1,1e8];\n')
+        f.write('x'+str(i)+' in '+ '[-1e8,1e8];\n')
     f.write('\nConstraints\n\n')
     for i in range (0,len(constraints)):
         f.write(constraints[i]+';\n')
