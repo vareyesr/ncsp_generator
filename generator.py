@@ -115,7 +115,7 @@ class NumericStringParser(object):
         return val
 
 class Instance_creator:
-    def __init__(self,nb_var,nb_eq,poolsize,P,Q,nb_inst,r1,r2,r3,r4,min_dom,max_dom,sett,type_bench):
+    def __init__(self,nb_var,nb_eq,poolsize,P,Q,nb_inst,r1,r2,r3,r4,min_dom,max_dom,sett,type_bench,type_pool,Q1,Q2):
         self.nb_var = nb_var
         self.nb_eq = nb_eq
         self.poolsize = poolsize
@@ -130,14 +130,29 @@ class Instance_creator:
         self.max_dom = max_dom 
         self.sett = sett
         self.type_bench = type_bench
+        self.type_pool = type_pool
+        self.Q1 = Q1
+        self.Q2 = Q2
         #create pool
-        pool = create_pool(nb_eq,poolsize,nb_inst,r4,self.type_bench)
+        pool = create_pool(self.nb_eq,self.poolsize,self.nb_inst,self.r4,self.type_pool)
         #create sets
         list_sets = create_pool_expressions(self.P,self.Q,pool)
+        list_sets2 = create_pool_expressions(self.nb_eq,self.Q1,pool)
+        list_sets3 = create_pool_expressions(self.nb_eq,self.Q2,pool)
         #create product
         list_expressions = create_expressions(list_sets,self.nb_eq,self.P)
+        list_expressions2 = create_expressions(list_sets2,self.nb_eq,self.nb_eq)
+        list_expressions3 = create_expressions(list_sets3,self.nb_eq,self.nb_eq)
+        #Q1set,Q2set = create_two_expressions(list_sets,self.nb_eq,self.P)
         #create constraint
-        constraints = create_constraints(list_expressions,self.r1,self.r2,self.r3,self.type_bench)
+        if type_bench == 'sum':
+            constraints = create_constraints(list_expressions,self.r1,self.r2,self.r3,self.type_bench)
+        elif type_bench == 'two-sums':
+             constraint1 = create_constraints(list_expressions2,self.r1,self.r2,self.r3,'sum')
+             constraint2 = create_constraints(list_expressions3,self.r1,self.r2,self.r3,'sum')
+             constraints = [list() for _ in xrange(len(constraint1))]
+             for i in range(0,len(constraints)):
+                constraints[i] = constraint1[i]+'*'+constraint2[i]
         #evaluate each constraint with a tuple (x0,x1....,xn)
         constraints,solution = evaluate_constraints(constraints,self.min_dom,self.max_dom)
         #create file
@@ -175,9 +190,17 @@ def create_expressions(list_sets,nb_eq,P):
     return list_factors
 
 def create_constraints(list_products,r1,r2,r3,type_bench):
+    
+
+    if type_bench == 'sum-mul':
+        type_benchmark = ['sum','mul']
+    else:
+        type_benchmark = []
     list_constraints = [list() for _ in xrange(len(list_products))]
     for i in range(0,len(list_constraints)):
         constraint = ''
+        if len(type_benchmark) > 1:
+            type_bench = type_benchmark[random.randint(0,len(type_benchmark)-1)]
         if type_bench == 'sum':
             for j in range(0,len(list_products[i])):
                 if j is not 0:
@@ -199,7 +222,7 @@ def create_constraints(list_products,r1,r2,r3,type_bench):
                     constraint = constraint+')^('+str(int(exp))+')'
                 else:
                     constraint = constraint+')'
-        else:
+        elif type_bench == 'mul':
             for j in range(0,len(list_products[i])):
                 if j is not 0:
                     constraint = constraint+'+'
@@ -208,11 +231,39 @@ def create_constraints(list_products,r1,r2,r3,type_bench):
                 element = list_products[i][j]
                 for k in element:
                     coef = r1[random.randint(0,len(r1)-1)]
+                    #constraint = constraint+'*'+k
                     if coef < 0:
-                        constraint = constraint+'*('+k+')^('+str(int(coef))+')'
+                        constraint = constraint+'*'+k+'^('+str(int(coef))+')'
                     else:
-                         constraint =constraint+'*('+k+')^'+str(int(coef))
-                constraint = constraint+')'         
+                        constraint =constraint+'*'+k+'^('+str(int(coef))+')'
+                constraint = constraint+')'
+        elif type_bench == 'trigo':    
+            for j in range(0,len(list_products[i])):
+                if j is not 0:
+                    constraint = constraint+'+'
+                coef = r2[random.randint(0,len(r2)-1)]
+                unary = ['exp','not']
+                unary_selection = unary[random.randint(0,len(unary)-1)]
+                if unary_selection is not 'not':
+                    constraint = constraint+unary_selection+'('
+                if coef == 0:
+                    constraint = constraint+'('
+                else:
+                    constraint = constraint+'('+str(int(coef))
+                element = list_products[i][j]
+                for k in element:
+                    coef = r1[random.randint(0,len(r1)-1)]
+                    if coef < 0:
+                        constraint = constraint+str(int(coef))+'*'+k
+                    else:
+                        constraint = constraint+'+'+str(int(coef))+'*'+k
+                exp = r3[random.randint(0,len(r3)-1)]
+                if exp != 1:
+                    constraint = constraint+')^('+str(int(exp))+')'
+                else:
+                    constraint = constraint+')'
+                if unary_selection is not 'not':
+                    constraint = constraint+')'
         list_constraints[i] = constraint
     return list_constraints
 
@@ -258,7 +309,7 @@ def create_file(constraints,solution,min_dom,max_dom,nb_inst,nb_var,sett):
     f.write('end')
 
 
-def create_pool(nb_var,poolsize,nb_inst,r4,type_bench):
+def create_pool(nb_var,poolsize,nb_inst,r4,type_pool):
     #create the first n variables
     pool_list = []
     unary_exp = []
@@ -266,7 +317,8 @@ def create_pool(nb_var,poolsize,nb_inst,r4,type_bench):
     for i in range(0, nb_var):
         unary_exp.append('x'+str(i))
     #additional (unary functions)
-    if type_bench == 'sum':
+
+    if type_pool == 'power':
         for i in range (0, nb_var):
             exponent = int(r4[random.randint(0,len(r4)-1)])
             if exponent == 1:
@@ -276,14 +328,14 @@ def create_pool(nb_var,poolsize,nb_inst,r4,type_bench):
             pool_list.append(expression)
             pool_set.add(expression)
         fns = [power_fun]
-    else:
+
+    elif type_pool == 'unary':
         for i in range (0, nb_var):
             expression = 'x'+str(i)
             pool_list.append(expression)
             pool_set.add(expression)
-        fns = [unary_fun]
+        fns = [unary_fun]   
 
-    current_size = len(pool_list)
     for i in range(0,poolsize-nb_var): 
         expression = random.choice(fns)(unary_exp,r4)
         while expression in pool_set:
@@ -294,7 +346,7 @@ def create_pool(nb_var,poolsize,nb_inst,r4,type_bench):
 
 def unary_fun(unary_exp,r4):        
     #unary = ['exp']
-    unary = ['sin','cos','tan','exp']
+    unary = ['exp']
     #unary = ['sin','cos','tan','exp','ln']
     return unary[random.randint(0,len(unary)-1)]+'('+unary_exp[random.randint(0,len(unary_exp)-1)]+')'
 
@@ -334,6 +386,9 @@ class Params:
         if configParser.has_option(name,  'type_bench'):
             self.type_bench = str(configParser.get(name, 'type_bench'))
 
+        if configParser.has_option(name,  'type_pool'):
+            self.type_pool = str(configParser.get(name, 'type_pool'))
+
         if configParser.has_option(name,  'rnd_seed'):
             self.rnd_seed = int(configParser.get(name, 'rnd_seed'))
 
@@ -351,6 +406,10 @@ class Params:
 
         if configParser.has_option(name, 'Q'):
             self.Q = int(configParser.get(name, 'Q'))
+        if configParser.has_option(name, 'Q1'):
+            self.Q1 = int(configParser.get(name, 'Q1'))
+        if configParser.has_option(name, 'Q2'):
+            self.Q2 = int(configParser.get(name, 'Q2'))
      
 if __name__ == '__main__':
 
@@ -366,7 +425,7 @@ if __name__ == '__main__':
 
         #number of constraints per equation
         for i in range(1, p.nb_inst+1):
-            Instance_creator(p.n,p.m,p.poolsize,p.P,p.Q,i,p.r1,p.r2,p.r3,p.r4,p.lb,p.ub,p.set,p.type_bench)
+            Instance_creator(p.n,p.m,p.poolsize,p.P,p.Q,i,p.r1,p.r2,p.r3,p.r4,p.lb,p.ub,p.set,p.type_bench,p.type_pool,p.Q1,p.Q2)
         if p.nb_inst == 1:
             print str(p.nb_inst)+' instance has been created!'
         else:
