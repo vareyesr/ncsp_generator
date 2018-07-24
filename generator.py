@@ -1,6 +1,6 @@
 #
 #Created:       20/05/2018
-#Last update:   24/05/2018
+#Last update:   24/07/2018
 #Authors:       Victor Reyes, Ignacio Araya
 #
 from __future__ import division
@@ -425,7 +425,7 @@ if __name__ == '__main__':
 
         #number of constraints per equation
         for i in range(1, p.nb_inst+1):
-            Instance_creator(p.n,p.m,p.poolsize,p.P,p.Q,i,p.r1,p.r2,p.r3,p.r4,p.lb,p.ub,p.set,p.type_bench,p.type_pool,p.Q1,p.Q2)
+            Instance_creator(p.n,p.m,p.poolsize,p.P,p.Q,i,p.r1,p.r2,p.r3,p.r4,p.lb,p.ub,p.set,p.type_bench,p.type_pool,1,1)
         if p.nb_inst == 1:
             print str(p.nb_inst)+' instance has been created!'
         else:

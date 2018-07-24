@@ -1,12 +1,12 @@
 [default]
 
-sets = 90-10 80-20 70-30 60-40 50-50
+sets = test1 test2
 
 n = 8
 m = 8
 dom = -1 1
 poolsize = 12
-type_bench = two-sums
+type_bench = sum
 type_pool = power
 rnd_seed = 1
 # coefficients
@@ -19,32 +19,10 @@ r3 = -1 1
 r4 = 1 2 3
 nb_inst = 20
 
-[90-10]
+[test1]
 P = 9
-Q1 = 90
-Q2 = 10
 Q = 100
 
-[80-20]
-P = 9
-Q1 = 80
-Q2 = 20
-Q = 100
-
-[70-30]
-P = 9
-Q1 = 70
-Q2 = 30
-Q = 100
-
-[60-40]
-P = 9
-Q1 = 60
-Q2 = 40
-Q = 100
-
-[50-50]
-P = 9
-Q1 = 50
-Q2 = 50
+[test2]
+P = 18
 Q = 100
